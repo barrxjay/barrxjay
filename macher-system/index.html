@@ -1,0 +1,877 @@
+<title>Das Macher-System</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ein "System-Fenster" als Statuskarte links, Quest-Tafel rechts; auf dem Handy untereinander.
+   Bewusst nur ein dunkles Thema: das Spiel lebt im leuchtenden System-Interface. */
+:root{
+  color-scheme: dark;
+  --ink:#060a13;        /* Grund */
+  --panel:#0b1322;      /* Fensterfläche */
+  --panel-2:#0f1a2e;
+  --line:#1d3352;       /* Rahmen */
+  --glow:#4cc3ff;       /* System-Blau */
+  --glow-soft:rgba(76,195,255,.14);
+  --text:#dce8f6;
+  --muted:#7f95b0;
+  --gold:#f2c25a;
+  --good:#4fdc9e;
+  --danger:#ff5a73;
+  --epic:#b48cff;
+  --rare:#58a6ff;
+  --legend:#ffb347;
+  --f-display:"Chakra Petch", "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--ink);overflow-x:clip}
+body{
+  color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:20px 48px;
+  background:
+    radial-gradient(1200px 500px at 70% -10%, rgba(76,195,255,.10), transparent 60%),
+    linear-gradient(var(--ink), var(--ink));
+  min-height:100%;overflow-x:clip;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}}
+
+/* System-Fenster */
+.win{
+  position:relative;background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);border-radius:4px;
+  box-shadow:0 0 0 1px rgba(76,195,255,.05), 0 0 32px -12px rgba(76,195,255,.35);
+}
+.win::before,.win::after{content:"";position:absolute;width:14px;height:14px;border-color:var(--glow);border-style:solid;pointer-events:none}
+.win::before{top:-1px;left:-1px;border-width:2px 0 0 2px}
+.win::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0}
+.win-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.win-title{font-family:var(--f-display);font-weight:600;letter-spacing:.18em;text-transform:uppercase;font-size:13px;color:var(--glow)}
+.win-body{padding:16px}
+
+/* Status */
+.status{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 12px)}
+@media (max-width:860px){.status{position:static}}
+.who{display:flex;gap:14px;align-items:center}
+.rank{
+  flex:none;width:64px;height:64px;display:grid;place-items:center;
+  font-family:var(--f-display);font-weight:700;font-size:34px;color:var(--glow);
+  border:1px solid var(--glow);border-radius:4px;background:var(--glow-soft);
+  text-shadow:0 0 12px rgba(76,195,255,.7);
+}
+.who-name{font-family:var(--f-display);font-size:22px;font-weight:600;line-height:1.1;overflow-wrap:anywhere}
+.who-title{color:var(--muted);font-size:13px}
+.lvl-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:16px}
+.lvl{font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--muted)}
+.lvl b{font-size:30px;color:var(--text);margin-left:6px;font-weight:700}
+.xpnum{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:8px;background:#0a1626;border:1px solid var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#1f7fd0,var(--glow));box-shadow:0 0 10px var(--glow);transition:width .5s ease}
+.bar.gold>i{background:linear-gradient(90deg,#b8862a,var(--gold));box-shadow:0 0 8px var(--gold)}
+.bar.good>i{background:linear-gradient(90deg,#1f9c6a,var(--good));box-shadow:0 0 8px var(--good)}
+.cap-note{margin-top:8px;font-size:12px;color:var(--gold)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px}
+.stat{border:1px solid var(--line);border-radius:3px;padding:8px 10px;background:rgba(6,10,19,.5)}
+.stat small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat span{font-family:var(--f-display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat.gold span{color:var(--gold)} .stat.fire span{color:#ff9f5a} .stat.box span{color:var(--epic)} .stat.tix span{color:var(--good)}
+.deadline{margin-top:14px;padding:10px 12px;border:1px dashed var(--line);border-radius:3px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.deadline small{color:var(--muted);font-size:12px}
+.deadline b{font-family:var(--f-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.deadline.urgent b{color:var(--danger);text-shadow:0 0 8px rgba(255,90,115,.6)}
+.attr-mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:14px}
+.attr-mini div{text-align:center;border:1px solid var(--line);border-radius:3px;padding:6px 2px}
+.attr-mini small{display:block;font-family:var(--f-display);letter-spacing:.12em;font-size:11px;color:var(--muted)}
+.attr-mini b{font-family:var(--f-display);font-size:18px}
+.sync{margin-top:12px;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tab{
+  background:transparent;border:1px solid var(--line);border-radius:3px;padding:7px 12px;
+  font-family:var(--f-display);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--muted);
+}
+.tab:hover{color:var(--text);border-color:#2b4c78}
+.tab[aria-selected="true"]{color:var(--ink);background:var(--glow);border-color:var(--glow);box-shadow:0 0 14px -2px var(--glow)}
+.tab .dot{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--epic);color:var(--ink);font-size:11px;letter-spacing:0}
+
+.section-intro{color:var(--muted);font-size:14px;max-width:65ch;margin:0 0 14px}
+h2{font-family:var(--f-display);font-weight:600;font-size:20px;margin:0;text-wrap:balance}
+h3{font-family:var(--f-display);font-weight:600;font-size:16px;margin:0}
+
+/* Quests */
+.quests{display:grid;gap:10px}
+.quest{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:3px;background:rgba(6,10,19,.45)}
+.quest.done{border-color:rgba(79,220,158,.45);background:rgba(79,220,158,.05)}
+.quest.penalty{border-color:rgba(255,90,115,.6);background:rgba(255,90,115,.06)}
+.q-name{font-weight:600;overflow-wrap:anywhere}
+.q-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:4px;font-size:12px;color:var(--muted)}
+.chip{font-family:var(--f-display);letter-spacing:.08em;font-size:11px;padding:1px 7px;border:1px solid var(--line);border-radius:2px;color:var(--glow)}
+.chip.xp{color:var(--text)} .chip.g{color:var(--gold)} .chip.red{color:var(--danger);border-color:rgba(255,90,115,.5)}
+.q-prog{display:flex;align-items:center;gap:8px}
+.q-count{font-family:var(--f-mono);font-variant-numeric:tabular-nums;min-width:74px;text-align:center;font-size:14px}
+.q-count small{color:var(--muted)}
+.q-bar{grid-column:1/-1;margin-top:-4px}
+.btn{border:1px solid var(--line);background:var(--panel-2);border-radius:3px;padding:7px 12px;font-weight:500;font-size:14px}
+.btn:hover{border-color:var(--glow);color:var(--glow)}
+.btn.sq{width:36px;height:36px;padding:0;font-family:var(--f-mono);font-size:18px;display:grid;place-items:center}
+.btn.primary{background:var(--glow);color:var(--ink);border-color:var(--glow);font-family:var(--f-display);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.btn.primary:hover{color:var(--ink);box-shadow:0 0 16px -2px var(--glow)}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.daily-sum{display:flex;align-items:center;gap:14px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--line);border-radius:3px}
+.daily-sum .big{font-family:var(--f-display);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.daily-sum .grow{flex:1;min-width:0}
+.banner{padding:12px 14px;border-radius:3px;margin-bottom:12px;font-size:14px}
+.banner.red{border:1px solid rgba(255,90,115,.6);background:rgba(255,90,115,.08)}
+.banner.blue{border:1px solid rgba(76,195,255,.5);background:var(--glow-soft)}
+.banner.gold{border:1px solid rgba(242,194,90,.55);background:rgba(242,194,90,.07)}
+.banner b{font-family:var(--f-display);letter-spacing:.06em}
+
+/* Attribute */
+.attrs{display:grid;gap:10px}
+.attr{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:3px}
+.attr-code{font-family:var(--f-display);font-weight:700;font-size:18px;color:var(--glow);letter-spacing:.06em}
+.attr-val{font-family:var(--f-display);font-size:26px;font-weight:700;text-align:right;min-width:40px;font-variant-numeric:tabular-nums}
+.attr-desc{font-size:12px;color:var(--muted)}
+.attr-break{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.pts-bank{font-family:var(--f-display);font-size:16px}
+.pts-bank b{color:var(--gold);font-size:24px}
+
+/* Hauptquest / Prüfung */
+.chapter{padding:14px;border:1px solid var(--line);border-radius:3px;margin-bottom:12px}
+.chapter .eyebrow{font-family:var(--f-display);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.objs{display:grid;gap:8px;margin-top:12px}
+.obj{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.obj.ok .obj-name{color:var(--good)}
+.obj-name{font-size:14px}
+.reward-line{margin-top:12px;font-size:13px;color:var(--muted)}
+.reward-line b{color:var(--gold);font-weight:500}
+.done-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+
+/* Box */
+.box-stage{display:grid;place-items:center;padding:24px 8px;text-align:center;gap:14px}
+.crate{width:120px;height:120px;position:relative}
+.crate svg{width:100%;height:100%}
+.crate.shake{animation:shake .9s ease-in-out}
+@keyframes shake{0%,100%{transform:rotate(0)}15%{transform:rotate(-8deg)}30%{transform:rotate(8deg)}45%{transform:rotate(-10deg) scale(1.05)}60%{transform:rotate(10deg) scale(1.08)}80%{transform:scale(1.15)}}
+.loot{padding:16px;border-radius:3px;border:1px solid var(--line);min-width:min(320px,100%)}
+.loot .rar{font-family:var(--f-display);letter-spacing:.2em;text-transform:uppercase;font-size:13px}
+.loot .what{font-family:var(--f-display);font-size:20px;font-weight:600;margin-top:4px}
+.r-common{color:var(--text)} .r-rare{color:var(--rare)} .r-epic{color:var(--epic)} .r-legend{color:var(--legend)}
+.odds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%;max-width:460px}
+.odds div{border:1px solid var(--line);border-radius:3px;padding:6px;font-size:12px}
+.odds b{display:block;font-family:var(--f-mono);font-size:14px}
+@media (prefers-reduced-motion: reduce){.crate.shake{animation:none}.bar>i{transition:none}}
+
+/* Shop */
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.item{padding:12px 14px;border:1px solid var(--line);border-radius:3px;display:flex;flex-direction:column;gap:8px}
+.item .price{font-family:var(--f-display);color:var(--gold);font-size:18px;font-weight:600}
+.item .nm{font-weight:600;overflow-wrap:anywhere}
+
+/* Protokoll */
+.heat{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;max-width:340px}
+.heat div{aspect-ratio:1;border-radius:2px;background:#0d1828;border:1px solid var(--line);max-width:100%}
+.heat .h1{background:rgba(76,195,255,.25)} .heat .h2{background:rgba(76,195,255,.55)} .heat .h3{background:var(--glow);box-shadow:0 0 6px var(--glow)}
+.heat .miss{background:rgba(255,90,115,.35);border-color:rgba(255,90,115,.5)}
+.heat .today{outline:1px solid var(--text)}
+.logl{list-style:none;padding:0;margin:0;display:grid;gap:4px;font-size:13px}
+.logl li{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;padding:4px 0;border-bottom:1px solid rgba(29,51,82,.5)}
+.logl time{font-family:var(--f-mono);color:var(--muted);font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1px solid var(--line)}
+
+/* Formulare */
+label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+input,select,textarea{background:#08101d;border:1px solid var(--line);border-radius:3px;padding:8px 10px;color:var(--text);width:100%;min-width:0}
+textarea{min-height:120px;font-family:var(--f-mono);font-size:12px}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.form-grid .full{grid-column:1/-1}
+@media (max-width:520px){.form-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Modal + Toast */
+.modal{position:fixed;inset:0;background:rgba(3,6,12,.78);display:grid;place-items:center;z-index:50;
+  padding:max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))}
+.modal .win{width:min(560px,100%);max-height:100%;overflow:auto}
+.toasts{position:fixed;right:max(16px, env(safe-area-inset-right, 0px));bottom:calc(16px + env(safe-area-inset-bottom, 0px));display:grid;gap:8px;z-index:60;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--panel-2);border:1px solid var(--glow);border-radius:3px;padding:10px 14px;font-size:14px;box-shadow:0 0 20px -6px var(--glow);animation:tin .25s ease}
+.toast .sys{font-family:var(--f-display);font-size:11px;letter-spacing:.2em;color:var(--glow);display:block}
+.toast.gold{border-color:var(--gold)} .toast.gold .sys{color:var(--gold)}
+.toast.red{border-color:var(--danger)} .toast.red .sys{color:var(--danger)}
+@keyframes tin{from{transform:translateY(8px);opacity:0}}
+.levelup{font-family:var(--f-display);font-size:clamp(28px,6vw,48px);font-weight:700;letter-spacing:.14em;color:var(--glow);text-shadow:0 0 18px var(--glow);text-align:center}
+.muted{color:var(--muted)} .small{font-size:12px}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+</style>
+
+<div class="wrap">
+  <aside class="win status" aria-label="Status">
+    <div class="win-head"><span class="win-title">Status</span><button class="btn small" id="btn-settings" type="button">Einstellungen</button></div>
+    <div class="win-body" id="status"></div>
+  </aside>
+  <main>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <section class="win" id="panel" aria-live="polite">
+      <div class="win-head"><span class="win-title" id="panel-title">Tagesquests</span><span class="small muted" id="panel-sub"></span></div>
+      <div class="win-body" id="view"></div>
+    </section>
+  </main>
+</div>
+<div class="toasts" id="toasts"></div>
+<div class="modal" id="modal" hidden></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===================== Spieldaten ===================== */
+const ATTRS = {
+  KOM:{name:"Kommunikation", effect:"+1 % XP auf KOM-Quests je Punkt über 5"},
+  MUT:{name:"Mut", effect:"Mehr Glück in der Zufallsbox je Punkt über 5"},
+  FOK:{name:"Fokus", effect:"+1 % XP auf FOK-Quests je Punkt über 5"},
+  DIS:{name:"Disziplin", effect:"Streak-Bonus-Grenze +1 Tag je Punkt über 5"},
+  VIT:{name:"Vitalität", effect:"+1 % XP auf VIT-Quests je Punkt über 5"},
+  WIS:{name:"Wissen", effect:"+0,5 % XP auf alles je Punkt über 5"}
+};
+const RANKS = [
+  {r:"E", cap:10, title:"Anfänger"},
+  {r:"D", cap:20, title:"Lehrling der Stimme"},
+  {r:"C", cap:35, title:"Gestalter"},
+  {r:"B", cap:50, title:"Anführer"},
+  {r:"A", cap:70, title:"Meister der Routine"},
+  {r:"S", cap:9999, title:"Macher"}
+];
+const TRIALS = [
+  {name:"Prüfung: Die erste Bühne", objs:[
+    {id:"t0a", name:"7-Tage-Streak erreichen", auto:"streak", target:7},
+    {id:"t0b", name:"5-Minuten-Rede aufnehmen und komplett anhören", target:1},
+    {id:"t0c", name:"3 Fremde ansprechen", target:3}]},
+  {name:"Prüfung: Vor Publikum", objs:[
+    {id:"t1a", name:"14-Tage-Streak erreichen", auto:"streak", target:14},
+    {id:"t1b", name:"Vor mindestens 3 Personen sprechen", target:1},
+    {id:"t1c", name:"5 Anfragen an Menschen senden, die du nicht kennst", target:5}]},
+  {name:"Prüfung: Wirkung", objs:[
+    {id:"t2a", name:"21-Tage-Streak erreichen", auto:"streak", target:21},
+    {id:"t2b", name:"Einen Vortrag oder Workshop halten", target:1},
+    {id:"t2c", name:"Ein Projekt sichtbar abschließen", target:1}]},
+  {name:"Prüfung: Führung", objs:[
+    {id:"t3a", name:"30-Tage-Streak erreichen", auto:"streak", target:30},
+    {id:"t3b", name:"Etwas veröffentlichen (Video, Artikel, Produkt)", target:1},
+    {id:"t3c", name:"Jemanden 3-mal gezielt begleiten (Mentoring)", target:3}]},
+  {name:"Prüfung: Der Macher", objs:[
+    {id:"t4a", name:"60-Tage-Streak erreichen", auto:"streak", target:60},
+    {id:"t4b", name:"Ein Ziel erreichen, das dir vor einem Jahr unmöglich schien", target:1}]}
+];
+const CHAPTERS = [
+  {name:"Kapitel 1: Die Stimme finden", story:"Routine schlägt Talent. Du trainierst jeden Tag deine Stimme, bis Sprechen sich normal anfühlt.",
+   objs:[
+    {id:"c1a", name:"Tage mit erfülltem Kommunikations-Training", auto:"komDays", target:7},
+    {id:"c1b", name:"2-Minuten-Sprachmemo aufnehmen, anhören, 1 Punkt verbessern", target:3},
+    {id:"c1c", name:"Gespräch mit einer unbekannten Person begonnen", target:5}],
+   reward:{xp:300, gold:100, pts:2, boxes:1, title:"Die Stimme"}},
+  {name:"Kapitel 2: Präsenz", story:"Jetzt geht es darum, gesehen zu werden. Du sprichst zuerst und holst dir ehrliches Feedback.",
+   objs:[
+    {id:"c2a", name:"Tage mit erfülltem Kommunikations-Training (gesamt)", auto:"komDays", target:21},
+    {id:"c2b", name:"In einer Runde als Erste/r gesprochen", target:5},
+    {id:"c2c", name:"Feedback zu deiner Art zu sprechen eingeholt", target:3}],
+   reward:{xp:500, gold:200, pts:3, boxes:2, title:"Der Präsente"}},
+  {name:"Kapitel 3: Überzeugen", story:"Ideen zählen erst, wenn andere mitziehen. Du pitchst, verhandelst und sagst klar Nein.",
+   objs:[
+    {id:"c3a", name:"Eine Idee vor jemandem gepitcht", target:3},
+    {id:"c3b", name:"Ein schwieriges Gespräch geführt statt vermieden", target:2},
+    {id:"c3c", name:"Nein gesagt, ohne dich zu rechtfertigen", target:5}],
+   reward:{xp:800, gold:300, pts:4, boxes:2, title:"Der Überzeuger"}},
+  {name:"Kapitel 4: Der Macher", story:"Du baust etwas, das bleibt, und holst andere dazu.",
+   objs:[
+    {id:"c4a", name:"Streak von 30 Tagen", auto:"streak", target:30},
+    {id:"c4b", name:"Ein Projekt öffentlich angekündigt", target:1},
+    {id:"c4c", name:"Jemanden um Zusammenarbeit gebeten", target:5}],
+   reward:{xp:1200, gold:500, pts:5, boxes:3, title:"Macher aus Prinzip"}}
+];
+const PENALTIES = [
+  {name:"Strafquest: 100 Kniebeugen", target:100, unit:"Wdh", step:25},
+  {name:"Strafquest: 20 Min aufräumen, Handy in anderem Raum", target:20, unit:"Min", step:5},
+  {name:"Strafquest: 2 Min kalt duschen", target:2, unit:"Min", step:1},
+  {name:"Strafquest: 15 Min Spaziergang ohne Kopfhörer", target:15, unit:"Min", step:5}
+];
+function defaultDailies(){ return [
+  {id:uid(), name:"Kommunikations-Training: laut vorlesen, Rede üben oder Sprachmemo", target:10, unit:"Min", step:5, attr:"KOM", xp:30, gold:10, kom:true},
+  {id:uid(), name:"Ein echtes Gespräch beginnen (Kasse, Kollege, Nachbar, Fremder)", target:1, unit:"Gespräch", step:1, attr:"MUT", xp:25, gold:10, kom:false},
+  {id:uid(), name:"Deep Work ohne Handy", target:45, unit:"Min", step:15, attr:"FOK", xp:30, gold:10, kom:false},
+  {id:uid(), name:"Liegestütze", target:30, unit:"Wdh", step:10, attr:"VIT", xp:20, gold:5, kom:false},
+  {id:uid(), name:"Lesen", target:10, unit:"Seiten", step:5, attr:"WIS", xp:20, gold:5, kom:false},
+  {id:uid(), name:"Abend-Review: 3 Sätze, was lief gut, was morgen besser", target:1, unit:"Eintrag", step:1, attr:"DIS", xp:15, gold:5, kom:false}
+].map(q=>Object.assign(q,{progress:0, claimed:false})); }
+function defaultRewards(){ return [
+  {id:uid(), name:"Eine Folge deiner Lieblingsserie", cost:60},
+  {id:uid(), name:"Lieblingsessen bestellen", cost:180},
+  {id:uid(), name:"Freier Abend ohne Pläne", cost:300},
+  {id:uid(), name:"Etwas Neues kaufen (bis 50 €)", cost:700}
+]; }
+
+function freshState(){
+  const t = todayKey();
+  const attrs = {}; Object.keys(ATTRS).forEach(k=>attrs[k]={alloc:5, txp:0});
+  return {v:1, updated:Date.now(), name:"Macher", title:"", titles:[], day:t, startDay:t,
+    level:1, xp:0, rank:0, gold:0, freePts:3, streak:0, bestStreak:0, tickets:1, boxes:1,
+    attrs, dailies:defaultDailies(), dayClaimed:false, penalty:null,
+    chapter:0, chapterProg:{}, trialProg:{}, stats:{komDays:0, questsDone:0, boxesOpened:0, daysFull:0},
+    rewards:defaultRewards(), history:{}, log:[{t:Date.now(), m:"Das System wurde aktiviert. Willkommen, Spieler."}]};
+}
+
+/* ===================== Hilfen ===================== */
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function pad(n){ return String(n).padStart(2,"0"); }
+function keyOf(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function todayKey(){ return keyOf(new Date()); }
+function parseKey(k){ const [y,m,d]=k.split("-").map(Number); return new Date(y,m-1,d); }
+function addDays(k,n){ const d=parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); }
+function h(tag, attrs, ...kids){
+  const el=document.createElement(tag);
+  if(attrs) for(const [k,v] of Object.entries(attrs)){
+    if(v==null||v===false) continue;
+    if(k==="class") el.className=v; else if(k==="text") el.textContent=v;
+    else if(k.startsWith("on")) el.addEventListener(k.slice(2),v);
+    else if(k==="style") el.setAttribute("style",v);
+    else el.setAttribute(k, v===true?"":v);
+  }
+  for(const c of kids.flat()){ if(c==null||c===false) continue; el.append(c instanceof Node?c:document.createTextNode(String(c))); }
+  return el;
+}
+const fmt = n => Math.round(n).toLocaleString("de-DE");
+function xpNeed(l){ return 60 + 40*l; }
+function trainLvl(txp){ return Math.floor(Math.sqrt(txp/30)); }
+function attrVal(k){ const a=S.attrs[k]; return a.alloc + trainLvl(a.txp); }
+function rankCap(){ return RANKS[S.rank].cap; }
+function streakCapDays(){ return 10 + Math.max(0, attrVal("DIS")-5); }
+function streakBonus(){ return Math.min(S.streak, streakCapDays())*0.02; }
+function xpMult(attr){
+  let m = 1 + streakBonus() + Math.max(0,attrVal("WIS")-5)*0.005;
+  if(attr && attr!=="WIS" && attr!=="DIS" && attr!=="MUT") m += Math.max(0,attrVal(attr)-5)*0.01;
+  return m;
+}
+function log(m){ S.log.unshift({t:Date.now(), m}); S.log = S.log.slice(0,80); }
+
+/* ===================== Zustand & Speicher ===================== */
+let S = null, tab = "quests", syncMode = "lokal";
+const LS_KEY = "macher-system-v1";
+let db = null, docRef = null, saveTimer = null, writing = Promise.resolve();
+
+function loadLocal(){ try{ const raw=localStorage.getItem(LS_KEY); return raw?JSON.parse(raw):null; }catch(e){ return null; } }
+function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function migrate(s){
+  const f = freshState();
+  for(const k of Object.keys(f)) if(s[k]===undefined) s[k]=f[k];
+  for(const k of Object.keys(ATTRS)) if(!s.attrs[k]) s.attrs[k]={alloc:5,txp:0};
+  s.stats = Object.assign(f.stats, s.stats||{});
+  return s;
+}
+function save(){
+  S.updated = Date.now(); saveLocal();
+  if(!docRef) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    const snap = JSON.parse(JSON.stringify(S));
+    writing = writing.then(()=>docRef.set(snap)).then(()=>{ setSync("gespeichert im Konto"); })
+      .catch(err=>{ setSync("Speichern fehlgeschlagen ("+(err&&err.code||"Fehler")+"), lokal gesichert"); });
+  }, 700);
+}
+function setSync(t){ syncMode=t; const el=document.getElementById("sync"); if(el) el.textContent="Speicher: "+t; }
+
+async function connectDb(){
+  if(!window.claude || !window.claude.use) return;
+  try{
+    const [dbns, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    if(!dbns || !user) { setSync("nur dieses Gerät"); return; }
+    const id = await user.id();
+    if(!id){ setSync("nur dieses Gerät"); return; }
+    db = dbns;
+    const ref = db.doc("data/users/"+id+"/game");
+    const timer = new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout"}),10000));
+    const snap = await Promise.race([ref.get(), timer]);
+    docRef = ref;
+    if(snap.exists){
+      const remote = snap.data();
+      if(remote && (remote.updated||0) >= (S.updated||0) && remote.v){
+        S = migrate(JSON.parse(JSON.stringify(remote)));
+        processRollover(); saveLocal(); render();
+      } else save();
+    } else save();
+    setSync("gespeichert im Konto");
+  }catch(e){ setSync("nur dieses Gerät"); }
+}
+
+/* ===================== Tageswechsel & Strafen ===================== */
+function allDone(){ return S.dailies.length>0 && S.dailies.every(q=>q.progress>=q.target); }
+function failDay(k){
+  if(S.tickets>0){ S.tickets--; log("Tag "+k+" verpasst. Ein Ruhetag-Ticket hat deinen Streak geschützt."); return; }
+  const lost = Math.round(xpNeed(S.level)*0.1);
+  S.xp = Math.max(0, S.xp - lost);
+  if(S.streak>0) log("Tag "+k+" verpasst. Streak von "+S.streak+" Tagen verloren, −"+lost+" XP.");
+  else log("Tag "+k+" verpasst. −"+lost+" XP.");
+  S.streak = 0;
+  if(!S.penalty){ const p=PENALTIES[Math.floor(Math.random()*PENALTIES.length)]; S.penalty=Object.assign({progress:0},p); log("Strafzone: "+p.name+". Die Zufallsbox bleibt gesperrt, bis sie erledigt ist."); }
+}
+function processRollover(){
+  const t = todayKey();
+  if(S.day === t) return false;
+  if(S.day > t){ S.day = t; return false; }
+  const doneCount = S.dailies.filter(q=>q.progress>=q.target).length;
+  S.history[S.day] = {d:doneCount, n:S.dailies.length, full:S.dayClaimed};
+  if(!S.dayClaimed) failDay(S.day);
+  let k = addDays(S.day,1), guard=0;
+  while(k < t && guard<60){ S.history[k]={d:0,n:S.dailies.length,full:false}; failDay(k); k=addDays(k,1); guard++; }
+  S.dailies.forEach(q=>{q.progress=0; q.claimed=false;});
+  S.dayClaimed=false; S.day=t;
+  const keys = Object.keys(S.history).sort(); while(keys.length>120) delete S.history[keys.shift()];
+  return true;
+}
+
+/* ===================== Belohnungen & Level ===================== */
+function gainXP(base, attr, silent){
+  const gained = Math.round(base * xpMult(attr));
+  S.xp += gained;
+  if(attr && S.attrs[attr]){
+    const before = trainLvl(S.attrs[attr].txp);
+    S.attrs[attr].txp += base;
+    const after = trainLvl(S.attrs[attr].txp);
+    if(after>before) toast("Training: "+ATTRS[attr].name+" steigt auf Stufe "+after+" (+1 "+attr+")","gold");
+  }
+  checkLevel();
+  return gained;
+}
+function checkLevel(){
+  let ups = 0;
+  while(S.xp >= xpNeed(S.level) && S.level < rankCap()){ S.xp -= xpNeed(S.level); S.level++; S.freePts += 3; ups++; }
+  if(S.level >= rankCap() && S.xp > xpNeed(S.level)) S.xp = xpNeed(S.level);
+  if(ups){ log("Level-Aufstieg auf "+S.level+". +"+(3*ups)+" Attributpunkte."); showLevelUp(ups); }
+}
+function grantTitle(t){ if(t && !S.titles.includes(t)){ S.titles.push(t); if(!S.title) S.title=t; log("Neuer Titel freigeschaltet: „"+t+"“"); } }
+
+function stepQuest(q, dir){
+  const prev = q.progress;
+  q.progress = Math.max(0, Math.min(q.target*3, q.progress + dir*q.step));
+  if(!q.claimed && prev < q.target && q.progress >= q.target){
+    q.claimed = true;
+    const g = gainXP(q.xp, q.attr);
+    S.gold += q.gold; S.stats.questsDone++;
+    if(q.kom){ S.stats.komDays++; }
+    toast("Quest erfüllt: "+q.name+"  +"+g+" XP, +"+q.gold+" Gold");
+    log("Quest erfüllt: "+q.name+" (+"+g+" XP)");
+    if(allDone() && !S.dayClaimed){
+      S.dayClaimed = true; S.streak++; S.bestStreak=Math.max(S.bestStreak,S.streak); S.stats.daysFull++;
+      const bonus = gainXP(50, null);
+      S.boxes++;
+      let extra = "";
+      if(S.streak % 7 === 0){ S.boxes++; S.tickets++; extra=" Wochen-Streak: +1 Bonus-Box und +1 Ruhetag-Ticket."; }
+      toast("Alle Tagesquests erfüllt. +"+bonus+" XP, +1 Zufallsbox. Streak: "+S.streak+"."+extra,"gold");
+      log("Tagesziel erreicht. Streak "+S.streak+"."+extra);
+    }
+    checkChapter(); checkTrial();
+  }
+  save(); render();
+}
+function stepPenalty(dir){
+  const p=S.penalty; p.progress=Math.max(0,Math.min(p.target,p.progress+dir*p.step));
+  if(p.progress>=p.target){ log("Strafquest erledigt: "+p.name+". Die Zufallsbox ist wieder frei."); toast("Strafzone verlassen. Box entsperrt.","gold"); S.penalty=null; }
+  save(); render();
+}
+function objProgress(o, prog){
+  if(o.auto==="streak") return Math.min(o.target, S.streak);
+  if(o.auto==="komDays") return Math.min(o.target, S.stats.komDays);
+  return Math.min(o.target, prog[o.id]||0);
+}
+function checkChapter(){
+  const c = CHAPTERS[S.chapter]; if(!c) return;
+  if(c.objs.every(o=>objProgress(o,S.chapterProg)>=o.target)){
+    const r=c.reward; gainXP(r.xp,null); S.gold+=r.gold; S.freePts+=r.pts; S.boxes+=r.boxes; grantTitle(r.title);
+    log(c.name+" abgeschlossen. +"+r.xp+" XP, +"+r.gold+" Gold, +"+r.pts+" Punkte, +"+r.boxes+" Boxen.");
+    showModal(h("div",{class:"win-body"}, h("div",{class:"levelup",text:"KAPITEL ABGESCHLOSSEN"}),
+      h("p",{style:"text-align:center",text:c.name}),
+      h("p",{class:"muted",style:"text-align:center",text:"+"+r.xp+" XP · +"+r.gold+" Gold · +"+r.pts+" Attributpunkte · +"+r.boxes+" Zufallsboxen · Titel „"+r.title+"“"}),
+      h("div",{class:"row",style:"justify-content:center"}, h("button",{class:"btn primary",type:"button",onclick:closeModal,text:"Weiter"}))), "Hauptquest");
+    S.chapter++; S.chapterProg={};
+  }
+}
+function trialReady(){ return S.rank < RANKS.length-1 && S.level >= rankCap(); }
+function checkTrial(){
+  const t=TRIALS[S.rank]; if(!t || !trialReady()) return;
+  if(t.objs.every(o=>objProgress(o,S.trialProg)>=o.target)){
+    S.rank++; S.freePts+=5; S.boxes+=2; grantTitle(RANKS[S.rank].title);
+    log(t.name+" bestanden. Rang "+RANKS[S.rank].r+" erreicht. Levelgrenze jetzt "+rankCap()+".");
+    S.trialProg={};
+    showModal(h("div",{class:"win-body"}, h("div",{class:"levelup",text:"RANG "+RANKS[S.rank].r}),
+      h("p",{style:"text-align:center",text:t.name+" bestanden."}),
+      h("p",{class:"muted",style:"text-align:center",text:"+5 Attributpunkte · +2 Zufallsboxen · Titel „"+RANKS[S.rank].title+"“ · Neue Levelgrenze: "+rankCap()}),
+      h("div",{class:"row",style:"justify-content:center"}, h("button",{class:"btn primary",type:"button",onclick:closeModal,text:"Weiter"}))), "Rangaufstieg");
+    checkLevel();
+  }
+}
+
+/* ===================== Zufallsbox ===================== */
+function odds(){
+  const luck = Math.max(0, attrVal("MUT")-5);
+  let leg = 2 + luck*0.4, epic = 10 + luck*1.2, rare = 28 + luck*1.0;
+  const common = Math.max(20, 100-leg-epic-rare);
+  return {common, rare, epic, leg};
+}
+function rollBox(){
+  const o=odds(), r=Math.random()*(o.common+o.rare+o.epic+o.leg);
+  let rar = r < o.leg ? "legend" : r < o.leg+o.epic ? "epic" : r < o.leg+o.epic+o.rare ? "rare" : "common";
+  const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  let lines=[];
+  if(rar==="common"){
+    if(Math.random()<.5){ const x=rnd(30,60); S.xp+=x; lines.push("+"+x+" XP"); } else { const g=rnd(25,50); S.gold+=g; lines.push("+"+g+" Gold"); }
+  } else if(rar==="rare"){
+    if(Math.random()<.55){ S.freePts+=1; lines.push("+1 Attributpunkt"); } else { S.xp+=100; S.gold+=40; lines.push("+100 XP","+40 Gold"); }
+  } else if(rar==="epic"){
+    const pick=Math.random();
+    if(pick<.5 || !S.rewards.length){ S.freePts+=2; S.tickets+=1; lines.push("+2 Attributpunkte","+1 Ruhetag-Ticket"); }
+    else { const rw=S.rewards[Math.floor(Math.random()*S.rewards.length)]; lines.push("Gratis-Belohnung: "+rw.name); log("Zufallsbox: Gratis-Belohnung „"+rw.name+"“ — gönn sie dir heute."); }
+  } else {
+    S.freePts+=3; S.xp+=300; S.gold+=150; lines.push("+3 Attributpunkte","+300 XP","+150 Gold","Titel „Glückskind“"); grantTitle("Glückskind");
+  }
+  S.boxes--; S.stats.boxesOpened++;
+  checkLevel();
+  log("Zufallsbox ("+({common:"Gewöhnlich",rare:"Selten",epic:"Episch",legend:"Legendär"})[rar]+"): "+lines.join(", "));
+  return {rar, lines};
+}
+
+/* ===================== UI: Toast, Modal ===================== */
+function toast(msg, kind){
+  const el = h("div",{class:"toast "+(kind||"")}, h("span",{class:"sys",text:"[ SYSTEM ]"}), msg);
+  document.getElementById("toasts").append(el);
+  setTimeout(()=>el.remove(), 4200);
+}
+function showModal(content, title){
+  const m=document.getElementById("modal"); m.replaceChildren();
+  const w=h("div",{class:"win",role:"dialog","aria-modal":"true","aria-label":title||"Hinweis"},
+    h("div",{class:"win-head"}, h("span",{class:"win-title",text:title||"System"}), h("button",{class:"btn small",type:"button",onclick:closeModal,"aria-label":"Schließen",text:"Schließen"})), content);
+  m.append(w); m.hidden=false;
+  const f=w.querySelector("input,button.primary,button"); if(f) f.focus();
+}
+function closeModal(){ document.getElementById("modal").hidden=true; render(); }
+document.getElementById("modal").addEventListener("click", e=>{ if(e.target.id==="modal") closeModal(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !document.getElementById("modal").hidden) closeModal(); });
+function showLevelUp(n){
+  showModal(h("div",{class:"win-body"},
+    h("div",{class:"levelup",text:"LEVEL UP"}),
+    h("p",{style:"text-align:center;font-family:var(--f-display);font-size:20px",text:"Level "+S.level}),
+    h("p",{class:"muted",style:"text-align:center",text:"+"+(3*n)+" freie Attributpunkte. Verteile sie im Status-Tab."}),
+    h("div",{class:"row",style:"justify-content:center"},
+      h("button",{class:"btn primary",type:"button",onclick:()=>{tab="attrs";closeModal();},text:"Punkte verteilen"}),
+      h("button",{class:"btn",type:"button",onclick:closeModal,text:"Später"}))), "Benachrichtigung");
+}
+
+/* ===================== UI: Status ===================== */
+function renderStatus(){
+  const el=document.getElementById("status"); el.replaceChildren();
+  const add=(...xs)=>el.append(...xs.filter(x=>x!=null));
+  const need=xpNeed(S.level), atCap = S.level>=rankCap() && S.rank<RANKS.length-1;
+  add(
+    h("div",{class:"who"}, h("div",{class:"rank",title:"Rang",text:RANKS[S.rank].r}),
+      h("div",{style:"min-width:0"}, h("div",{class:"who-name",text:S.name}), h("div",{class:"who-title",text:S.title?("Titel: "+S.title):"Noch kein Titel"}))),
+    h("div",{class:"lvl-row"}, h("span",{class:"lvl"},"LEVEL", h("b",{text:S.level})), h("span",{class:"xpnum",text:fmt(S.xp)+" / "+fmt(need)+" XP"})),
+    h("div",{class:"bar"}, h("i",{style:"width:"+Math.min(100,S.xp/need*100)+"%"})),
+    atCap ? h("div",{class:"cap-note",text:"Levelgrenze für Rang "+RANKS[S.rank].r+" erreicht. Bestehe die Rangprüfung."}) : null,
+    h("div",{class:"stats"},
+      h("div",{class:"stat fire"}, h("small",{text:"Streak"}), h("span",{text:S.streak+" Tage"})),
+      h("div",{class:"stat gold"}, h("small",{text:"Gold"}), h("span",{text:fmt(S.gold)})),
+      h("div",{class:"stat box"}, h("small",{text:"Zufallsboxen"}), h("span",{text:S.boxes})),
+      h("div",{class:"stat tix"}, h("small",{text:"Ruhetag-Tickets"}), h("span",{text:S.tickets}))),
+    h("div",{class:"deadline",id:"deadline"}, h("small",{text:"Tagesfrist endet in"}), h("b",{id:"countdown",text:"--:--:--"})),
+    h("div",{class:"attr-mini"}, Object.keys(ATTRS).map(k=>h("div",null,h("small",{text:k}),h("b",{text:attrVal(k)})))),
+    S.freePts ? h("button",{class:"btn",style:"margin-top:10px;width:100%",type:"button",onclick:()=>{tab="attrs";render();},text:S.freePts+" freie Attributpunkte verteilen"}) : null,
+    h("div",{class:"sync",id:"sync",text:"Speicher: "+syncMode})
+  );
+  tickCountdown();
+}
+function tickCountdown(){
+  const now=new Date(), end=new Date(now); end.setHours(24,0,0,0);
+  const s=Math.max(0,Math.floor((end-now)/1000));
+  const c=document.getElementById("countdown"); if(!c) return;
+  c.textContent=pad(Math.floor(s/3600))+":"+pad(Math.floor(s%3600/60))+":"+pad(s%60);
+  document.getElementById("deadline").classList.toggle("urgent", s<3*3600 && !S.dayClaimed);
+}
+
+/* ===================== UI: Tabs ===================== */
+const TABS = [
+  {id:"quests", name:"Tagesquests"}, {id:"main", name:"Hauptquest"}, {id:"attrs", name:"Attribute"},
+  {id:"box", name:"Zufallsbox"}, {id:"shop", name:"Belohnungen"}, {id:"log", name:"Protokoll"}
+];
+function renderTabs(){
+  const el=document.getElementById("tabs"); el.replaceChildren();
+  TABS.forEach(t=>{
+    const badge = t.id==="box"&&S.boxes ? S.boxes : t.id==="attrs"&&S.freePts ? S.freePts : t.id==="main"&&trialReady() ? "!" : null;
+    el.append(h("button",{class:"tab",role:"tab",type:"button","aria-selected":String(tab===t.id),onclick:()=>{tab=t.id;render();}}, t.name, badge!=null?h("span",{class:"dot",text:badge}):null));
+  });
+}
+
+function questRow(q){
+  const done=q.progress>=q.target;
+  return h("div",{class:"quest"+(done?" done":"")},
+    h("div",{style:"min-width:0"}, h("div",{class:"q-name",text:q.name}),
+      h("div",{class:"q-meta"}, h("span",{class:"chip",text:q.attr}), h("span",{class:"chip xp",text:"+"+Math.round(q.xp*xpMult(q.attr))+" XP"}), h("span",{class:"chip g",text:"+"+q.gold+" G"}),
+        done?h("span",{style:"color:var(--good)",text:"✓ erfüllt"}):null)),
+    h("div",{class:"q-prog"},
+      h("button",{class:"btn sq",type:"button","aria-label":"Weniger",onclick:()=>stepQuest(q,-1),text:"−"}),
+      h("div",{class:"q-count"}, String(q.progress), h("small",{text:" / "+q.target+" "+q.unit})),
+      h("button",{class:"btn sq",type:"button","aria-label":"Mehr: +"+q.step+" "+q.unit,onclick:()=>stepQuest(q,1),text:"+"})),
+    h("div",{class:"bar q-bar good"}, h("i",{style:"width:"+Math.min(100,q.progress/q.target*100)+"%"})));
+}
+function viewQuests(v){
+  const done=S.dailies.filter(q=>q.progress>=q.target).length, n=S.dailies.length;
+  setPanel("Tagesquests", "Frist: heute 23:59");
+  if(S.penalty){
+    const p=S.penalty;
+    v.append(h("div",{class:"banner red"}, h("b",{text:"STRAFZONE. "}), "Du hast eine Tagesfrist verpasst. Erledige die Strafquest, um deine Zufallsboxen wieder öffnen zu können."),
+      h("div",{class:"quest penalty",style:"margin-bottom:12px"},
+        h("div",{style:"min-width:0"}, h("div",{class:"q-name",text:p.name}), h("div",{class:"q-meta"}, h("span",{class:"chip red",text:"PFLICHT"}))),
+        h("div",{class:"q-prog"}, h("button",{class:"btn sq",type:"button","aria-label":"Weniger",onclick:()=>stepPenalty(-1),text:"−"}),
+          h("div",{class:"q-count"}, String(p.progress), h("small",{text:" / "+p.target+" "+p.unit})),
+          h("button",{class:"btn sq",type:"button","aria-label":"Mehr",onclick:()=>stepPenalty(1),text:"+"}))));
+  }
+  v.append(h("div",{class:"daily-sum"},
+    h("div",{class:"big",text:done+"/"+n}),
+    h("div",{class:"grow"},
+      h("div",{text:S.dayClaimed?"Tagesziel erreicht. Morgen geht es weiter.":"Erfülle alle Quests bis Mitternacht für +50 XP, eine Zufallsbox und +1 Streak."}),
+      h("div",{class:"small muted",text:"Streak-Bonus: +"+Math.round(streakBonus()*100)+" % XP (max. +"+streakCapDays()*2+" %). Verpasst du die Frist, verlierst du den Streak und 10 % XP."}),
+      h("div",{class:"bar gold",style:"margin-top:6px"}, h("i",{style:"width:"+(n?done/n*100:0)+"%"})))));
+  v.append(h("div",{class:"quests"}, S.dailies.map(questRow)));
+  v.append(h("div",{class:"row",style:"margin-top:14px"},
+    h("button",{class:"btn",type:"button",onclick:()=>editQuest(null),text:"+ Eigene Tagesquest"}),
+    h("button",{class:"btn",type:"button",onclick:manageQuests,text:"Quests bearbeiten"})));
+}
+
+function objRow(o, prog, store){
+  const val=objProgress(o,prog), ok=val>=o.target;
+  return h("div",{class:"obj"+(ok?" ok":"")},
+    h("div",{style:"min-width:0"}, h("div",{class:"obj-name",text:(ok?"✓ ":"")+o.name+(o.auto?" (automatisch)":"")}),
+      h("div",{class:"bar good",style:"margin-top:4px"}, h("i",{style:"width:"+(val/o.target*100)+"%"}))),
+    h("div",{class:"q-prog"},
+      o.auto?null:h("button",{class:"btn sq",type:"button","aria-label":"Weniger",onclick:()=>{prog[o.id]=Math.max(0,(prog[o.id]||0)-1);save();render();},text:"−"}),
+      h("div",{class:"q-count"}, String(val), h("small",{text:" / "+o.target})),
+      o.auto?null:h("button",{class:"btn sq",type:"button","aria-label":"Mehr",onclick:()=>{prog[o.id]=Math.min(o.target,(prog[o.id]||0)+1); if(store==="c") checkChapter(); else checkTrial(); save();render();},text:"+"})));
+}
+function viewMain(v){
+  setPanel("Hauptquest & Rangprüfung","");
+  // Rangprüfung
+  const t=TRIALS[S.rank];
+  if(t){
+    const ready=trialReady();
+    v.append(h("div",{class:"chapter",style:ready?"border-color:var(--gold)":""},
+      h("div",{class:"eyebrow",text:"Rangprüfung · Rang "+RANKS[S.rank].r+" → "+RANKS[S.rank+1].r}),
+      h("h3",{text:t.name}),
+      h("p",{class:"small muted",style:"margin:6px 0 0",text: ready ? "Freigeschaltet. Erfülle alle Ziele, um aufzusteigen. Bis dahin bleibt dein Level bei "+rankCap()+"." : "Wird bei Level "+rankCap()+" freigeschaltet. Dein Level kann ohne bestandene Prüfung nicht weiter steigen."}),
+      ready ? h("div",{class:"objs"}, t.objs.map(o=>objRow(o,S.trialProg,"t"))) : null,
+      h("div",{class:"reward-line"},"Belohnung: ", h("b",{text:"Rang "+RANKS[S.rank+1].r+", +5 Attributpunkte, +2 Zufallsboxen, Titel „"+RANKS[S.rank+1].title+"“"}))));
+  } else v.append(h("div",{class:"banner gold"}, h("b",{text:"Rang S. "}),"Du hast jede Prüfung bestanden."));
+  // Kapitel
+  const c=CHAPTERS[S.chapter];
+  if(c){
+    v.append(h("div",{class:"chapter"},
+      h("div",{class:"eyebrow",text:"Hauptquest · "+(S.chapter+1)+" von "+CHAPTERS.length}),
+      h("h3",{text:c.name}), h("p",{class:"small muted",style:"margin:6px 0 0",text:c.story}),
+      h("div",{class:"objs"}, c.objs.map(o=>objRow(o,S.chapterProg,"c"))),
+      h("div",{class:"reward-line"},"Belohnung: ", h("b",{text:"+"+c.reward.xp+" XP, +"+c.reward.gold+" Gold, +"+c.reward.pts+" Attributpunkte, +"+c.reward.boxes+" Zufallsboxen, Titel „"+c.reward.title+"“"}))));
+  } else v.append(h("div",{class:"banner gold"}, h("b",{text:"Alle Kapitel abgeschlossen. "}),"Setz dir neue Tagesquests und steigere die Ziele."));
+  v.append(h("p",{class:"small muted",text:"Drei Wege nach oben: XP aus Quests bringt Level. Training bringt Attributstufen. Prüfungen heben die Levelgrenze deines Rangs."}));
+}
+
+function viewAttrs(v){
+  setPanel("Attribute","");
+  v.append(h("div",{class:"spread",style:"margin-bottom:12px"},
+    h("div",{class:"pts-bank"},"Freie Punkte: ", h("b",{text:S.freePts})),
+    h("div",{class:"small muted",text:"+3 pro Level, mehr aus Boxen, Kapiteln und Prüfungen"})));
+  v.append(h("p",{class:"section-intro",text:"Jeder Wert setzt sich zusammen aus verteilten Punkten und Trainingsstufen. Trainingsstufen steigen von selbst, wenn du Quests des Attributs erfüllst. Verteilte Punkte sind endgültig."}));
+  v.append(h("div",{class:"attrs"}, Object.keys(ATTRS).map(k=>{
+    const a=S.attrs[k], tl=trainLvl(a.txp), nextT=30*(tl+1)*(tl+1);
+    return h("div",{class:"attr"},
+      h("div",{class:"attr-code",text:k}),
+      h("div",{style:"min-width:0"}, h("div",{text:ATTRS[k].name}), h("div",{class:"attr-desc",text:ATTRS[k].effect}),
+        h("div",{class:"attr-break",text:"verteilt "+a.alloc+" · Training Stufe "+tl+" ("+a.txp+"/"+nextT+" TP)"})),
+      h("div",{class:"row"}, h("div",{class:"attr-val",text:attrVal(k)}),
+        h("button",{class:"btn sq",type:"button",disabled:!S.freePts,"aria-label":"Punkt auf "+ATTRS[k].name,onclick:()=>{ if(!S.freePts) return; S.freePts--; a.alloc++; log("+1 Punkt auf "+ATTRS[k].name+"."); save(); render(); },text:"+"})));
+  })));
+  v.append(h("hr"), h("div",{class:"small muted"}, "Aktuelle Boni: Streak +"+Math.round(streakBonus()*100)+" % · Wissen +"+(Math.max(0,attrVal("WIS")-5)*0.5).toFixed(1)+" % auf alles · Box-Glück durch Mut: Legendär "+odds().leg.toFixed(1)+" %"));
+}
+
+function crateSVG(){
+  return '<svg viewBox="0 0 120 120" aria-hidden="true"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3a63"/><stop offset="1" stop-color="#0c1a2e"/></linearGradient></defs>'+
+  '<rect x="18" y="44" width="84" height="58" rx="3" fill="url(#cg)" stroke="#4cc3ff" stroke-width="2"/>'+
+  '<rect x="12" y="30" width="96" height="20" rx="3" fill="#13294a" stroke="#4cc3ff" stroke-width="2"/>'+
+  '<rect x="54" y="30" width="12" height="72" fill="#4cc3ff" opacity=".85"/>'+
+  '<text x="60" y="85" text-anchor="middle" font-family="Chakra Petch, sans-serif" font-size="22" font-weight="700" fill="#dce8f6">?</text></svg>';
+}
+function viewBox(v){
+  setPanel("Zufallsbox", S.boxes+" verfügbar");
+  const o=odds(), locked=!!S.penalty;
+  const stage=h("div",{class:"box-stage"});
+  const crate=h("div",{class:"crate"}); crate.innerHTML=crateSVG();
+  const result=h("div",{});
+  const btn=h("button",{class:"btn primary",type:"button",disabled:!S.boxes||locked,text:locked?"Gesperrt (Strafzone)":S.boxes?"Box öffnen":"Keine Box verfügbar"});
+  btn.addEventListener("click",()=>{
+    if(!S.boxes||S.penalty) return;
+    btn.disabled=true; result.replaceChildren(); crate.classList.remove("shake"); void crate.offsetWidth; crate.classList.add("shake");
+    const res=rollBox(); save();
+    const name={common:"Gewöhnlich",rare:"Selten",epic:"Episch",legend:"Legendär"}[res.rar];
+    setTimeout(()=>{
+      result.append(h("div",{class:"loot",style:"border-color:currentColor"},
+        h("div",{class:"rar r-"+res.rar,text:name}), res.lines.map(l=>h("div",{class:"what",text:l}))));
+      renderStatus(); renderTabs();
+      btn.disabled=!S.boxes; btn.textContent=S.boxes?"Nächste Box öffnen":"Keine Box verfügbar";
+    }, window.matchMedia("(prefers-reduced-motion: reduce)").matches?0:950);
+  });
+  stage.append(crate, btn, result,
+    h("div",{class:"odds"},
+      h("div",{class:"r-common"},"Gewöhnlich",h("b",{text:o.common.toFixed(0)+" %"})),
+      h("div",{class:"r-rare"},"Selten",h("b",{text:o.rare.toFixed(0)+" %"})),
+      h("div",{class:"r-epic"},"Episch",h("b",{text:o.epic.toFixed(0)+" %"})),
+      h("div",{class:"r-legend"},"Legendär",h("b",{text:o.leg.toFixed(1)+" %"}))));
+  if(locked) v.append(h("div",{class:"banner red"},"Die Box ist gesperrt, solange eine Strafquest offen ist."));
+  v.append(stage, h("p",{class:"small muted",text:"Boxen gibt es für jeden vollständigen Tag, für jeden 7-Tage-Streak, für Kapitel und Prüfungen. Inhalt: XP, Gold, Attributpunkte, Ruhetag-Tickets oder eine deiner eigenen Belohnungen. Mut erhöht die Chancen auf seltene Beute."}));
+}
+
+function viewShop(v){
+  setPanel("Belohnungen", fmt(S.gold)+" Gold");
+  v.append(h("p",{class:"section-intro",text:"Lege echte Belohnungen fest und kaufe sie mit Gold aus deinen Quests. Die Beispiele kannst du ändern oder löschen. Gönn dir eine Belohnung erst, wenn du sie gekauft hast."}));
+  const grid=h("div",{class:"shop"});
+  grid.append(h("div",{class:"item"}, h("div",{class:"nm",text:"Ruhetag-Ticket"}), h("div",{class:"small muted",text:"Schützt deinen Streak automatisch an einem verpassten Tag."}),
+    h("div",{class:"spread"}, h("span",{class:"price",text:"250 G"}), h("button",{class:"btn",type:"button",disabled:S.gold<250,onclick:()=>{S.gold-=250;S.tickets++;log("Ruhetag-Ticket gekauft.");toast("Ruhetag-Ticket gekauft.");save();render();},text:"Kaufen"}))));
+  S.rewards.forEach(r=>{
+    grid.append(h("div",{class:"item"}, h("div",{class:"nm",text:r.name}),
+      h("div",{class:"spread"}, h("span",{class:"price",text:fmt(r.cost)+" G"}),
+        h("div",{class:"row"},
+          h("button",{class:"btn danger",type:"button","aria-label":"Löschen: "+r.name,onclick:()=>{S.rewards=S.rewards.filter(x=>x!==r);save();render();},text:"✕"}),
+          h("button",{class:"btn",type:"button",disabled:S.gold<r.cost,onclick:()=>{S.gold-=r.cost;log("Belohnung gekauft: „"+r.name+"“. Genieß sie.");toast("Belohnung freigeschaltet: "+r.name,"gold");save();render();},text:"Kaufen"})))));
+  });
+  v.append(grid);
+  const nm=h("input",{id:"rw-name",placeholder:"z. B. Kinoabend",maxlength:"80"}), cost=h("input",{id:"rw-cost",type:"number",min:"1",value:"200"});
+  v.append(h("hr"), h("form",{class:"form-grid",onsubmit:e=>{e.preventDefault(); const n=nm.value.trim(), c=Math.max(1,parseInt(cost.value,10)||0); if(!n) return; S.rewards.push({id:uid(),name:n,cost:c}); save(); render();}},
+    h("label",{class:"full"},"Neue Belohnung",nm), h("label",null,"Preis in Gold",cost),
+    h("div",{style:"align-self:end"}, h("button",{class:"btn primary",type:"submit",text:"Hinzufügen"}))));
+}
+
+function viewLog(v){
+  setPanel("Protokoll", S.stats.daysFull+" volle Tage");
+  const t=todayKey(), cells=[];
+  for(let i=34;i>=0;i--){
+    const k=addDays(t,-i), hst=S.history[k];
+    let cls="";
+    if(k===t){ const d=S.dailies.filter(q=>q.progress>=q.target).length, n=S.dailies.length||1; cls = S.dayClaimed?"h3": d/n>=.5?"h2": d>0?"h1":""; cls+=" today"; }
+    else if(hst){ cls = hst.full?"h3": hst.d/(hst.n||1)>=.5?"miss h2":"miss"; if(!hst.full && hst.d===0) cls="miss"; }
+    cells.push(h("div",{class:cls,title:k+(hst?(" · "+hst.d+"/"+hst.n):"")}));
+  }
+  v.append(h("h3",{text:"Letzte 5 Wochen"}), h("div",{class:"heat",style:"margin-top:8px"}, cells),
+    h("div",{class:"legend"}, h("span",null,h("i",{style:"background:var(--glow)"}),"Tagesziel erreicht"), h("span",null,h("i",{style:"background:rgba(255,90,115,.35)"}),"Frist verpasst"), h("span",null,h("i",{style:"background:#0d1828"}),"Noch kein Eintrag")),
+    h("div",{class:"stats",style:"grid-template-columns:repeat(auto-fill,minmax(140px,1fr))"},
+      h("div",{class:"stat"},h("small",{text:"Bester Streak"}),h("span",{text:S.bestStreak})),
+      h("div",{class:"stat"},h("small",{text:"Quests erfüllt"}),h("span",{text:S.stats.questsDone})),
+      h("div",{class:"stat"},h("small",{text:"KOM-Trainingstage"}),h("span",{text:S.stats.komDays})),
+      h("div",{class:"stat"},h("small",{text:"Boxen geöffnet"}),h("span",{text:S.stats.boxesOpened}))),
+    h("hr"), h("h3",{text:"Systemmeldungen"}),
+    h("ul",{class:"logl",style:"margin-top:8px"}, S.log.slice(0,40).map(e=>{ const d=new Date(e.t); return h("li",null,h("time",{text:pad(d.getDate())+"."+pad(d.getMonth()+1)+". "+pad(d.getHours())+":"+pad(d.getMinutes())}),h("span",{text:e.m})); })));
+}
+
+/* ===================== Quest-Editor ===================== */
+function editQuest(q){
+  const isNew=!q;
+  const d=q||{name:"",target:10,unit:"Min",step:5,attr:"KOM",xp:20,gold:5,kom:false};
+  const f={
+    name:h("input",{id:"q-name",value:d.name,maxlength:"100",placeholder:"z. B. 5 Min Elevator-Pitch laut üben",required:true}),
+    target:h("input",{id:"q-target",type:"number",min:"1",value:d.target}),
+    unit:h("input",{id:"q-unit",value:d.unit,maxlength:"16"}),
+    step:h("input",{id:"q-step",type:"number",min:"1",value:d.step}),
+    attr:h("select",{id:"q-attr"}, Object.keys(ATTRS).map(k=>{ const o=h("option",{value:k,text:k+" · "+ATTRS[k].name}); if(k===d.attr) o.selected=true; return o; })),
+    xp:h("input",{id:"q-xp",type:"number",min:"5",max:"200",value:d.xp}),
+    gold:h("input",{id:"q-gold",type:"number",min:"0",max:"100",value:d.gold}),
+    kom:h("input",{id:"q-kom",type:"checkbox",style:"width:auto"})
+  };
+  f.kom.checked=!!d.kom;
+  const form=h("form",{class:"win-body",onsubmit:e=>{
+    e.preventDefault();
+    const n=f.name.value.trim(); if(!n) return;
+    const vals={name:n, target:Math.max(1,+f.target.value||1), unit:f.unit.value.trim()||"x", step:Math.max(1,+f.step.value||1), attr:f.attr.value,
+      xp:Math.min(200,Math.max(5,+f.xp.value||5)), gold:Math.min(100,Math.max(0,+f.gold.value||0)), kom:f.kom.checked};
+    if(isNew){ S.dailies.push(Object.assign({id:uid(),progress:0,claimed:false},vals)); log("Neue Tagesquest: "+n); }
+    else Object.assign(q,vals);
+    save(); closeModal();
+  }},
+    h("div",{class:"form-grid"},
+      h("label",{class:"full"},"Name (messbar formulieren)",f.name),
+      h("label",null,"Tagesziel",f.target), h("label",null,"Einheit",f.unit),
+      h("label",null,"Schritt pro Klick",f.step), h("label",null,"Attribut",f.attr),
+      h("label",null,"XP-Belohnung",f.xp), h("label",null,"Gold-Belohnung",f.gold),
+      h("label",{class:"full",style:"display:flex;gap:8px;align-items:center"},f.kom,"Zählt als Kommunikations-Training für die Hauptquest")),
+    h("p",{class:"small muted",text:"Faustregel: 15–30 XP für kleine Gewohnheiten, 30–60 XP für Dinge, die Überwindung kosten. Neue Quests wirken sich auf das heutige Tagesziel aus."}),
+    h("div",{class:"row"}, h("button",{class:"btn primary",type:"submit",text:isNew?"Quest anlegen":"Speichern"}), h("button",{class:"btn",type:"button",onclick:closeModal,text:"Abbrechen"})));
+  showModal(form, isNew?"Neue Tagesquest":"Quest bearbeiten");
+}
+function manageQuests(){
+  const body=h("div",{class:"win-body"});
+  const list=h("div",{class:"quests"});
+  S.dailies.forEach((q,i)=>{
+    list.append(h("div",{class:"quest"},
+      h("div",{style:"min-width:0"}, h("div",{class:"q-name",text:q.name}), h("div",{class:"q-meta",text:q.target+" "+q.unit+" · "+q.attr+" · "+q.xp+" XP"})),
+      h("div",{class:"row"},
+        h("button",{class:"btn sq",type:"button","aria-label":"Nach oben",disabled:i===0,onclick:()=>{S.dailies.splice(i-1,0,S.dailies.splice(i,1)[0]);save();manageQuests();},text:"↑"}),
+        h("button",{class:"btn",type:"button",onclick:()=>editQuest(q),text:"Bearbeiten"}),
+        h("button",{class:"btn danger",type:"button",onclick:()=>{ if(S.dailies.length<=1){toast("Mindestens eine Tagesquest muss bleiben.","red");return;} S.dailies=S.dailies.filter(x=>x!==q); log("Tagesquest entfernt: "+q.name); save(); manageQuests(); },text:"Entfernen"}))));
+  });
+  body.append(list, h("div",{class:"row",style:"margin-top:12px"}, h("button",{class:"btn",type:"button",onclick:()=>editQuest(null),text:"+ Neue Quest"}), h("button",{class:"btn primary",type:"button",onclick:closeModal,text:"Fertig"})));
+  showModal(body,"Tagesquests verwalten");
+}
+
+/* ===================== Einstellungen ===================== */
+function openSettings(){
+  const nm=h("input",{id:"set-name",value:S.name,maxlength:"40"});
+  const tsel=h("select",{id:"set-title"}, h("option",{value:"",text:"— kein Titel —"}), S.titles.map(t=>{ const o=h("option",{value:t,text:t}); if(t===S.title) o.selected=true; return o; }));
+  const io=h("textarea",{id:"set-io",placeholder:"Hier einen exportierten Spielstand einfügen …"});
+  const confirmBox=h("div",{hidden:true}, h("p",{class:"small",style:"color:var(--danger)",text:"Wirklich alles zurücksetzen? Level, Streak und Fortschritt gehen verloren."}),
+    h("div",{class:"row"}, h("button",{class:"btn danger",type:"button",onclick:()=>{S=freshState();save();closeModal();toast("Neues Spiel gestartet.");},text:"Ja, zurücksetzen"}), h("button",{class:"btn",type:"button",onclick:()=>{confirmBox.hidden=true;},text:"Abbrechen"})));
+  const body=h("div",{class:"win-body"},
+    h("form",{class:"form-grid",onsubmit:e=>{e.preventDefault(); S.name=nm.value.trim()||"Macher"; S.title=tsel.value; save(); closeModal();}},
+      h("label",null,"Spielername",nm), h("label",null,"Aktiver Titel",tsel),
+      h("div",{class:"full"}, h("button",{class:"btn primary",type:"submit",text:"Speichern"}))),
+    h("hr"),
+    h("h3",{text:"Spielstand sichern"}),
+    h("p",{class:"small muted",text:"Dein Fortschritt wird automatisch gespeichert ("+syncMode+"). Zusätzlich kannst du ihn als Text kopieren und auf einem anderen Gerät einfügen."}),
+    io,
+    h("div",{class:"row",style:"margin-top:8px"},
+      h("button",{class:"btn",type:"button",onclick:()=>{ const txt=JSON.stringify(S); io.value=txt; const p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(txt):Promise.reject(); p.then(()=>toast("Spielstand kopiert.")).catch(()=>{io.focus();io.select();toast("Text markiert. Kopiere ihn manuell.");}); },text:"Exportieren"}),
+      h("button",{class:"btn",type:"button",onclick:()=>{ try{ const s=JSON.parse(io.value); if(!s||!s.attrs||!s.dailies) throw 0; S=migrate(s); processRollover(); save(); closeModal(); toast("Spielstand geladen."); }catch(e){ toast("Das ist kein gültiger Spielstand. Füge den kompletten exportierten Text ein.","red"); } },text:"Importieren"})),
+    h("hr"),
+    h("button",{class:"btn danger",type:"button",onclick:()=>{confirmBox.hidden=false;},text:"Neues Spiel beginnen"}), confirmBox);
+  showModal(body,"Einstellungen");
+}
+document.getElementById("btn-settings").addEventListener("click", openSettings);
+
+/* ===================== Render ===================== */
+function setPanel(t,sub){ document.getElementById("panel-title").textContent=t; document.getElementById("panel-sub").textContent=sub||""; }
+function render(){
+  renderStatus(); renderTabs();
+  const v=document.getElementById("view"); v.replaceChildren();
+  ({quests:viewQuests, main:viewMain, attrs:viewAttrs, box:viewBox, shop:viewShop, log:viewLog})[tab](v);
+}
+
+/* ===================== Start ===================== */
+S = loadLocal(); S = S ? migrate(S) : freshState();
+const rolled = processRollover();
+if(rolled) saveLocal();
+render();
+if(S.log.length===1) setTimeout(()=>toast("Willkommen, Spieler. Deine ersten Tagesquests sind aktiv. Frist: Mitternacht."),400);
+setInterval(()=>{ if(processRollover()){ save(); render(); toast("Neuer Tag. Neue Quests.","gold"); } else tickCountdown(); }, 1000);
+connectDb();
+})();
+</script>
